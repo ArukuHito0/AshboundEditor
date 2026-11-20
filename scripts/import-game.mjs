@@ -51,5 +51,5 @@ const play = preview.replace(/<\/body>/i, '<script src="balance-settings.js"></s
 for (const name of editorScripts) readFileSync(resolve(dist, name));
 for (const [name, content] of assets) writeFileSync(resolve(dist, name), content);
 writeFileSync(resolve(dist, 'play.html'), play);
-writeFileSync(new URL('../game-source.json', import.meta.url), JSON.stringify({commit}, null, 2) + '\n');
+writeFileSync(new URL('../game-source.json', import.meta.url), JSON.stringify({commit, assets:[...assets.keys()]}, null, 2) + '\n');
 console.log('本編 ' + commit + ' から ' + assets.size + ' ファイルを取り込みました');
