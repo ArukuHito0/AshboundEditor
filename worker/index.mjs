@@ -44,11 +44,11 @@ function previewHtml(html, prefix=GAME_ASSET_PREFIX) {
 async function fetchGame(path, method) {
   const response = await fetch(GAME_ORIGIN + path, {
     method,
-    redirect: 'error',
+    redirect: 'manual',
     headers: {'Cache-Control': 'no-cache'},
     signal: AbortSignal.timeout(8000),
   });
-  if (!response.ok) throw Error('本編の取得に失敗しました。');
+  if (!response.ok) throw Error('本編の取得に失敗しました（HTTP ' + response.status + '）。');
   return response;
 }
 
