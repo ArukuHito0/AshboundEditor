@@ -1,0 +1,95 @@
+:root { color-scheme: dark; font-family: system-ui, sans-serif; color: #f1e9db; background: #141417; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { width: min(100% - 2rem, 96rem); margin: 0 auto; padding: 2rem 0 3rem; }
+header { border-bottom: 1px solid #4f4237; margin-bottom: 1.25rem; padding-bottom: .8rem; }
+a { color: #edb88b; }
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); margin: .6rem 0; }
+p { color: #c9c0b4; line-height: 1.6; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem 1rem; margin: .8rem 0; }
+.filters { justify-content: space-between; }
+.filters label { display: grid; gap: .25rem; min-width: 0; }
+.filters label[hidden] { display: none; }
+.filters label:has(#changes) { display: flex; align-items: center; }
+.filters input[type=search], .filters select { max-width: 100%; min-width: 0; }
+button, input, select { font: inherit; }
+button, input:not([type=checkbox]), select { padding: .5rem .65rem; border: 1px solid #695a4a; border-radius: .3rem; color: inherit; background: #242124; }
+button { cursor: pointer; }
+button:hover, button[aria-pressed=true] { background: #50382a; border-color: #d9996f; }
+button:disabled { opacity: .55; cursor: default; }
+:focus-visible { outline: 2px solid #ffc394; outline-offset: 2px; }
+.table-wrap { isolation: isolate; overflow: auto; max-height: 54vh; border: 1px solid #4f4237; }
+table { width: 100%; min-width: 31rem; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { padding: .65rem .8rem; text-align: left; border-bottom: 1px solid #3d3432; }
+thead { position: sticky; z-index: 1; top: 0; background: #292328; }
+td:first-child { width: 48%; }
+td input { width: 7rem; }
+td small { display: block; color: #c9c0b4; margin-top: .2rem; }
+td.changed { background: #31251f; }
+.play { margin-top: 2rem; border-top: 1px solid #4f4237; }
+iframe { width: 100%; height: max(38rem, 80vh); border: 1px solid #695a4a; background: #141417; }
+
+.card-table { table-layout: fixed; min-width: 59rem; }
+.card-table th:first-child, .card-table .card-target { width: 18%; }
+.card-table th, .card-table td { padding: .4rem .45rem; }
+.card-table .card-gutter { width: .85rem; padding: 0; background: #141417; border: 0; }
+.card-table td:nth-child(4), .card-table td:nth-child(9),
+.card-table th:nth-child(4), .card-table th:nth-child(9) { width: 8%; }
+.card-table .card-field input { width: 4.25rem; padding: .3rem .4rem; }
+.card-table .card-field { gap: .15rem; overflow-wrap: anywhere; }
+.card-table .card-field + .card-field { margin-top: .35rem; }
+.card-table .card-field input, .card-table .card-field-value { min-height: 2rem; }
+.card-table td { vertical-align: top; }
+.card-field { display: grid; justify-items: start; gap: .25rem; }
+.card-field + .card-field { margin-top: .65rem; }
+.card-field input, .card-field-value { min-height: 2.5rem; max-width: 100%; }
+.card-field-value { display: grid; align-items: center; }
+
+.card-preview { position: relative; width: min(100%, 10.5rem); aspect-ratio: 2 / 3; margin-inline: auto; padding: 12px; border: 1px solid #8c7850; border-radius: .65rem; background: linear-gradient(#2e342a, #171d19); color: #f1ecdf; text-align: center; }
+.card-preview[data-rarity=rare] { border-color: #83a9b8; background: linear-gradient(#263941, #16201f); }
+.card-preview[data-rarity=epic] { border-color: #b69adc; background: linear-gradient(#392c47, #231d2b); }
+.card-preview[data-rarity=token] { border-color: #a2a4a8; background: linear-gradient(150deg, #3b3d41, #242528); }
+.preview-cost { position: absolute; left: 10px; top: 10px; display: grid; place-items: center; min-width: 25px; aspect-ratio: 1; border: 1px solid #d4b77b; border-radius: 50%; background: #191b18; color: #f1d193; font-weight: 700; }
+.preview-art { display: flex; align-items: center; justify-content: center; height: 99px; margin: 12px 0 7px; color: #d4b77b; font: 64px Georgia, serif; background: radial-gradient(circle, #d4b77b18, transparent 65%); }
+.preview-art svg { width: 76px; height: 76px; max-width: 100%; }
+.preview-types { color: #d4b77b; font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+.card-preview h3 { margin: 0; font: 700 16px Georgia, 'Yu Mincho', serif; }
+.card-preview p { margin: 10px 0; color: #c5cfc5; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.card-preview .preview-adjusted-effects { color: #f1d193; border-top: 1px solid #8c7850; padding-top: .35rem; }
+
+.card-preview .keyword { color: #e2c18c; font-weight: 800; }
+.preview-latent, .preview-evolution { position: absolute; right: 10px; padding: 3px 7px; border: 1px solid; border-radius: 5px; font-size: 12px; line-height: 1.3; font-weight: 700; }
+.preview-latent { top: 10px; color: #ead6ff; background: #34283e; border-color: #bda0d4; }
+.preview-evolution { top: 37px; color: #c9ead2; background: #243c2c; border-color: #91b59b; }
+
+#publish-dialog { width: min(38rem, calc(100% - 2rem)); border: 1px solid #695a4a; border-radius: .5rem; background: #242124; color: inherit; }
+#publish-diff { max-height: 45vh; overflow: auto; }
+#publish-dialog::backdrop { background: #0009; }
+
+.enemy-list { max-height: 54vh; overflow: auto; border: 1px solid #4f4237; }
+.enemy-list details { border-bottom: 1px solid #3d3432; }
+.enemy-list summary { cursor: pointer; padding: .65rem .8rem; }
+.enemy-list > details > summary { background: #242124; }
+.enemy-list details details { margin: 0 .65rem .35rem; border: 1px solid #3d3432; }
+.enemy-list details details > p { margin: 0 .8rem .45rem; }
+.enemy-field {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: .45rem;
+  padding: .35rem .8rem;
+  font-variant-numeric: tabular-nums;
+}
+.enemy-field.changed { background: #31251f; }
+.enemy-field input { min-width: 0; width: min(100%, 7rem); }
+.enemy-headings { background: #292328; font-weight: 600; }
+@media (max-width: 480px) {
+  .enemy-field { grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); padding-inline: .45rem; }
+}
+
+.play-deck summary { cursor: pointer; }
+.play-deck select { max-width: min(100%, 22rem); }
+.play-deck ul { padding: 0; list-style: none; }
+.play-deck li, .play-deck li label { display: flex; align-items: center; gap: .6rem; }
+.play-deck li + li { margin-top: .4rem; }
+.play-deck li input { width: 5rem; }
