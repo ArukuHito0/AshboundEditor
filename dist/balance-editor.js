@@ -38,13 +38,20 @@ let group = 'cards';
 
 const isWeight = () => group === 'solo' || group === 'pairs';
 const valueOf = (config, row) => config[group][row.id] ?? row.value;
-const effectValue = (config, field) => config.cardEffects?.[field.id] ?? field.value;
+let resolveEffect;
+let normalizePublishedSettings;
+const effectValue = (config, field) => resolveEffect?.(config.cardEffects ?? {},field) ?? config.cardEffects?.[field.id] ?? field.value;
 const effectChanged = field => effectValue(settings, field) !== effectValue(live, field);
 const changed = row => valueOf(settings, row) !== valueOf(live, row) ||
-  (row.effects ?? []).some(effectChanged);
+  (row.effects ?? []).some(field=>!field.hidden&&effectChanged(field));
 const effectFields = new Map();
 
 const cardTextPatterns = {
+  bleedRepeat: /発動回数\+(\d+)/gu, bleedDecay: /減少量\+(\d+)/gu,
+  evolutionStrengthInterval: /カードが(\d+)回進化/gu, evolutionStrength: /筋力(\d+)/gu,
+  beastHunt: /HPを(\d+)失い/gu, beastHuntBleed: /裂傷(\d+)を付与/gu,
+  forge: /ダメージ\+(\d+)/gu, passionHp: /HPを(\d+)失い/gu,
+  passionBlock: /(\d+)ブロックを得る/gu, engineBlock: /(\d+)ブロックを得る/gu,
   d: /(-?\d+)\s*ダメージ/gu, h: /ダメージを\s*(\d+)\s*回/gu,
   b: /(-?\d+)\s*ブロック|ブロック\s*(\d+)/gu,
   s: /筋力\s*[+＋]?\s*(\d+)/gu, agility: /(?:守護|敏捷)\s*[+＋]?\s*(-?\d+)/gu,
@@ -70,7 +77,7 @@ function cardEffectPreview(row) {
   const description = row.detail;
   const replacements = new Map();
   const pending = [];
-  const entries = row.effects.filter(field => effectValue(settings, field) !== field.value);
+  const entries = row.effects.filter(field => !field.hidden && effectValue(settings, field) !== field.value);
   // Resolve the more specific clauses before matching their generic counterparts.
   entries.sort((a, b) => Number(['d', 'b'].includes(a.key)) - Number(['d', 'b'].includes(b.key)));
   for (const field of entries) {
@@ -161,6 +168,7 @@ function appendCardValue(cell, label, value, effectId) {
 function appendEffectInputs(adjustment, published, difference, row) {
   const hasExplicitHits = /\d+\s*ダメージを\s*\d+\s*回/u.test(row.detail.normalize('NFKC'));
   for (const field of row.effects) {
+    if (field.hidden) continue;
     if (field.key === 'h' && !hasExplicitHits) continue;
     const label = document.createElement('label');
     label.className = 'card-field';
@@ -180,8 +188,12 @@ function appendEffectInputs(adjustment, published, difference, row) {
         status('入力できる範囲は ' + field.min + '〜' + field.max + ' です。');
         return;
       }
-      if (value === field.value) delete settings.cardEffects[field.id];
-      else settings.cardEffects[field.id] = value;
+      const linkedKey = {beastHunt:'beastHuntBleed',bleedRepeat:'bleedDecay'}[field.key];
+      const linked = row.effects.find(effect=>effect.key===linkedKey);
+      const linkedBefore = linked && effectValue(settings,linked);
+      delete settings.cardEffects[field.id];
+      if (value !== effectValue(settings,field)) settings.cardEffects[field.id] = value;
+      if(linked && linkedBefore!==effectValue(settings,linked)) settings.cardEffects[linked.id]=linkedBefore;
       status('変更しました。下書きを保存できます。');
       updateDifferences();
     });
@@ -526,6 +538,8 @@ window.addEventListener('message', event => {
   }
   clearTimeout(previewTimer);
   renderCardKeywords = frame.contentWindow.rich;
+  resolveEffect = frame.contentWindow.balanceEffectiveEffect;
+  normalizePublishedSettings = frame.contentWindow.balanceValidate;
   catalog = event.data.catalog;
   setupTestDeck(event.data.characters,event.data.testCards);
   limits = event.data.limits;
@@ -600,6 +614,7 @@ async function requestBalanceRelease(options) {
 async function refreshPublishedBalance() {
   try {
     const {current, history} = await requestBalanceRelease();
+    if(normalizePublishedSettings) current.settings = normalizePublishedSettings(current.settings);
     validate(current.settings);
     const untouched = JSON.stringify(settings) === JSON.stringify({...structuredClone(live),cardEffects:{...live.cardEffects}});
     balanceRelease = current;
@@ -630,7 +645,7 @@ function listReleaseChanges() {
       const after = settings[key][row.id] ?? row.value;
       if (before !== after) changes.push(row.name + ' · ' + (key === 'cards' ? 'コスト' : key === 'enemyHp' ? 'HP' : key === 'enemyActions' ? row.detail : '重み') + ' ' + before + ' → ' + after);
       for (const field of row.effects ?? []) {
-        if (effectChanged(field)) changes.push(row.name + ' · ' + field.label + ' ' + effectValue(live,field) + ' → ' + effectValue(settings,field));
+        if (!field.hidden && effectChanged(field)) changes.push(row.name + ' · ' + field.label + ' ' + effectValue(live,field) + ' → ' + effectValue(settings,field));
       }
     }
   }
