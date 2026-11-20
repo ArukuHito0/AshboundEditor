@@ -501,9 +501,9 @@ function action(callback) {
 
 function loadPreview() {
   clearTimeout(previewTimer);
-  frame.src = 'play.html?v=19';
+  frame.src = 'play.html';
   previewTimer = setTimeout(() => {
-    status('テスト画面の起動を確認できませんでした。ページを再読み込みしてください。');
+    status('公開中の本編データを読み込めませんでした。ページを再読み込みしてください。');
   }, 15000);
 }
 

@@ -1,3 +1,81 @@
+
+const GAME_ORIGIN = 'https://ashbound-deck-hunt.takeshita0205ayumu.chatgpt.site';
+const GAME_ASSET_PREFIX = '/game-assets/';
+const PLAY_HEADERS = {
+  'Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff',
+};
+const GAME_SCRIPTS = /<script\b[^>]*\bsrc="([^"]+)"[^>]*><\/script>/gi;
+const STYLE_LINKS = /<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"[^>]*>/gi;
+
+function gameAssetPath(url, extension) {
+  const [name] = url.split('?');
+  if (!/^[\w.-]+$/.test(name) || !name.endsWith(extension)) {
+    throw Error('未対応の本編アセット: ' + name);
+  }
+  return GAME_ASSET_PREFIX + url;
+}
+
+function previewHtml(html) {
+  const scripts = [...html.matchAll(GAME_SCRIPTS)];
+  if (!scripts.length || scripts.length !== [...html.matchAll(/<script\b/gi)].length ||
+      !/<\/body>/i.test(html)) {
+    throw Error('本編の読み込み構成が変更されました。');
+  }
+  let hasRuntime = false;
+  const preview = html.replace(GAME_SCRIPTS, (tag, url) => {
+    const path = gameAssetPath(url, '.js');
+    const [name] = url.split('?');
+    if (name === 'balance-live.js') return '';
+    if (name === 'balance-settings.js') return '<script src="/balance-settings.js"></script>';
+    if (name === 'balance-runtime.js') hasRuntime = true;
+    return tag.replace('src="' + url + '"', 'src="' + path + '"');
+  }).replace(STYLE_LINKS, (tag, url) =>
+    tag.replace('href="' + url + '"', 'href="' + gameAssetPath(url, '.css') + '"')
+  );
+  if (!hasRuntime) throw Error('本編のバランス調整機能が見つかりません。');
+  return preview.replace(/<script\b/i, '<script src="/balance-preview.js"></script>$&');
+}
+
+async function fetchGame(path, method) {
+  const response = await fetch(GAME_ORIGIN + path, {
+    method,
+    redirect: 'error',
+    headers: {'Cache-Control': 'no-cache'},
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!response.ok) throw Error('本編の取得に失敗しました。');
+  return response;
+}
+
+async function servePreview(req, url) {
+  try {
+    if (url.pathname === '/play.html') {
+      const upstream = await fetchGame('/', 'GET');
+      if (!upstream.headers.get('Content-Type')?.includes('text/html')) throw Error('本編のHTMLが取得できません。');
+      const html = previewHtml(await upstream.text());
+      return new Response(req.method === 'HEAD' ? null : html, {
+        headers: {...PLAY_HEADERS, 'Content-Type': 'text/html; charset=utf-8'},
+      });
+    }
+    const name = url.pathname.slice(GAME_ASSET_PREFIX.length);
+    if (!/^[\w.-]+\.(?:js|css)$/.test(name)) return new Response(null, {status: 404});
+    const mime = name.endsWith('.css') ? 'text/css' : 'application/javascript';
+    const upstream = await fetchGame('/' + name + url.search, req.method);
+    const type = upstream.headers.get('Content-Type') ?? '';
+    if (!(mime === 'text/css' ? type.startsWith('text/css') : /^(?:application|text)\/(?:x-)?javascript\b/i.test(type))) {
+      throw Error('本編アセットの形式が一致しません。');
+    }
+    return new Response(upstream.body, {
+      headers: {...PLAY_HEADERS, 'Content-Type': mime + '; charset=utf-8'},
+    });
+  } catch {
+    return new Response(req.method === 'HEAD' ? null : '公開中の本編データを取得できませんでした。', {
+      status: 502, headers: {...PLAY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8'},
+    });
+  }
+}
+
 const json = (body,status) => Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 
 export default {async fetch(req,env) {
@@ -25,6 +103,9 @@ export default {async fetch(req,env) {
     }
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return new Response(null,{status:405});
+  if (url.pathname === '/play.html' || url.pathname.startsWith(GAME_ASSET_PREFIX)) {
+    return servePreview(req, url);
+  }
   const file = ASSETS[url.pathname === '/' ? 'index.html' : url.pathname.slice(1)];
   if (!Array.isArray(file)) return new Response('Not found',{status:404});
   return new Response(req.method==='HEAD'?null:file[1],{headers:{
