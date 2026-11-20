@@ -1,1 +1,8 @@
-/dist/server/
+/dist/*
+!/dist/index.html
+!/dist/balance-editor.css
+!/dist/balance-editor.js
+!/dist/balance-preview.js
+!/dist/balance-runtime.js
+!/dist/balance-settings.js
+/game-source.json

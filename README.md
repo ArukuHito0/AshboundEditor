@@ -4,13 +4,13 @@
 
 ## 本編を更新する
 
-Node.js と Git を用意し、エディターのリポジトリのルートから実行します。本編のチェックアウトには対象コミットが必要です。
+Node.js と Git を用意し、エディターのリポジトリのルートから実行します。本編のチェックアウトには対象コミットが必要です。新しくクローンしたエディターでも、取り込みを実行してからビルドします。
 
 ```sh
-node scripts/import-game.mjs ../RogueLightDeckBuilding <本編コミットの40桁のSHA>
+node scripts/import-game.mjs ../RogueLightDeckBuilding 932a66f19e74fe8e09e66cc036eb2ca69d4a9a2a
 node scripts/build-worker.mjs
 ```
 
-取り込んだ本編のコミットは `game-source.json` に記録されます。生成した差分を確認し、調整画面のカード・敵の一覧、試遊の開始と効果処理を検証してから反映します。このコマンドによる変更はローカルファイルに保存されます。
+例の SHA は試遊開始まで確認した本編コミットです。取り込んだ本編アセットと `play.html`、取り込み元を記録する `game-source.json` はローカルに生成されます。Sites 用の成果物を作るときも同じ手順で生成してからビルドします。
 
 [本編リポジトリ](https://github.com/ArukuHito0/RogueLightDeckBuilding)
