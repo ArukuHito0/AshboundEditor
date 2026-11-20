@@ -1,6 +1,7 @@
 
 const GAME_ORIGIN = 'https://ashbound-deck-hunt.takeshita0205ayumu.chatgpt.site';
 const GAME_ASSET_PREFIX = '/game-assets/';
+const SNAPSHOT_ASSET_PREFIX = '/game-snapshot/';
 const PLAY_HEADERS = {
   'Cache-Control': 'no-store',
   'X-Content-Type-Options': 'nosniff',
@@ -8,15 +9,15 @@ const PLAY_HEADERS = {
 const GAME_SCRIPTS = /<script\b[^>]*\bsrc="([^"]+)"[^>]*><\/script>/gi;
 const STYLE_LINKS = /<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"[^>]*>/gi;
 
-function gameAssetPath(url, extension) {
+function gameAssetPath(url, extension, prefix) {
   const [name] = url.split('?');
   if (!/^[\w.-]+$/.test(name) || !name.endsWith(extension)) {
     throw Error('未対応の本編アセット: ' + name);
   }
-  return GAME_ASSET_PREFIX + url;
+  return prefix + url;
 }
 
-function previewHtml(html) {
+function previewHtml(html, prefix=GAME_ASSET_PREFIX) {
   const scripts = [...html.matchAll(GAME_SCRIPTS)];
   if (!scripts.length || scripts.length !== [...html.matchAll(/<script\b/gi)].length ||
       !/<\/body>/i.test(html)) {
@@ -24,17 +25,20 @@ function previewHtml(html) {
   }
   let hasRuntime = false;
   const preview = html.replace(GAME_SCRIPTS, (tag, url) => {
-    const path = gameAssetPath(url, '.js');
+    const path = gameAssetPath(url, '.js', prefix);
     const [name] = url.split('?');
     if (name === 'balance-live.js') return '';
     if (name === 'balance-settings.js') return '<script src="/balance-settings.js"></script>';
     if (name === 'balance-runtime.js') hasRuntime = true;
     return tag.replace('src="' + url + '"', 'src="' + path + '"');
   }).replace(STYLE_LINKS, (tag, url) =>
-    tag.replace('href="' + url + '"', 'href="' + gameAssetPath(url, '.css') + '"')
+    tag.replace('href="' + url + '"', 'href="' + gameAssetPath(url, '.css', prefix) + '"')
   );
   if (!hasRuntime) throw Error('本編のバランス調整機能が見つかりません。');
-  return preview.replace(/<script\b/i, '<script src="/balance-preview.js"></script>$&');
+  const marked = prefix === SNAPSHOT_ASSET_PREFIX
+    ? preview.replace(/<html\b/i, '<html data-balance-snapshot="true"')
+    : preview;
+  return marked.replace(/<script\b/i, '<script src="/balance-preview.js"></script>$&');
 }
 
 async function fetchGame(path, method) {
@@ -50,6 +54,14 @@ async function fetchGame(path, method) {
 
 async function servePreview(req, url) {
   try {
+    if (url.pathname.startsWith(SNAPSHOT_ASSET_PREFIX)) {
+      const name=url.pathname.slice(SNAPSHOT_ASSET_PREFIX.length);
+      if (!/^[\w.-]+\.(?:js|css)$/.test(name) || !Object.hasOwn(GAME_FALLBACK,name)) return new Response(null,{status:404});
+      const type=name.endsWith('.css')?'text/css':'application/javascript';
+      return new Response(req.method==='HEAD'?null:GAME_FALLBACK[name],{
+        headers:{...PLAY_HEADERS,'Content-Type':type+'; charset=utf-8'},
+      });
+    }
     if (url.pathname === '/play.html') {
       const upstream = await fetchGame('/', 'GET');
       if (!upstream.headers.get('Content-Type')?.includes('text/html')) throw Error('本編のHTMLが取得できません。');
@@ -69,7 +81,13 @@ async function servePreview(req, url) {
     return new Response(upstream.body, {
       headers: {...PLAY_HEADERS, 'Content-Type': mime + '; charset=utf-8'},
     });
-  } catch {
+  } catch (error) {
+    console.warn('本編アセット取得失敗',url.pathname,String(error.message));
+    if (url.pathname === '/play.html' && GAME_FALLBACK['index.html']) {
+      return new Response(req.method === 'HEAD' ? null : previewHtml(GAME_FALLBACK['index.html'],SNAPSHOT_ASSET_PREFIX),{
+        headers:{...PLAY_HEADERS,'Content-Type':'text/html; charset=utf-8'},
+      });
+    }
     return new Response(req.method === 'HEAD' ? null : '公開中の本編データを取得できませんでした。', {
       status: 502, headers: {...PLAY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8'},
     });
@@ -103,7 +121,7 @@ export default {async fetch(req,env) {
     }
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return new Response(null,{status:405});
-  if (url.pathname === '/play.html' || url.pathname.startsWith(GAME_ASSET_PREFIX)) {
+  if (url.pathname === '/play.html' || url.pathname.startsWith(GAME_ASSET_PREFIX) || url.pathname.startsWith(SNAPSHOT_ASSET_PREFIX)) {
     return servePreview(req, url);
   }
   const file = ASSETS[url.pathname === '/' ? 'index.html' : url.pathname.slice(1)];

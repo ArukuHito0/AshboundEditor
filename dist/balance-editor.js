@@ -534,7 +534,7 @@ window.addEventListener('message', event => {
   effectFields.clear();
   for (const row of catalog.cards) for (const field of row.effects) effectFields.set(field.id, field);
   setupCardFilters();
-  status('公開設定を読み込みました。');
+  status(event.data.snapshot ? '本編の直接取得に失敗したため、公開時に取り込んだ本編データを使用しています。' : '本編データを読み込みました。');
   refreshPublishedBalance();
   try {
     const saved = JSON.parse(localStorage.getItem(draftKey));

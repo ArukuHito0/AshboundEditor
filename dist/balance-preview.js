@@ -10,6 +10,7 @@ const fetch = () => Promise.resolve(new Response(null, {status: 401}));
 window.addEventListener('load', () => {
   window.parent.postMessage({
     type: 'ashbound-balance-ready',
+    snapshot: document.documentElement.dataset.balanceSnapshot === 'true',
     catalog: balanceDefaults,
     characters: Object.values(CHARACTERS).map(({id,name})=>({id,name,starter:[...S.characterProfiles[id].deck]})),
     testCards: C.filter(card=>card?.id>=0&&!card.retired&&!card.fx?.unplayable)
